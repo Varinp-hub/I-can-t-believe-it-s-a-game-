@@ -1,0 +1,169 @@
+
+
+# Defining the structure for the game HTML file with Three.js integration.
+three_js_game = """
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>3D Space Fleet Battles</title>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            background-color: black;
+        }
+        canvas {
+            display: block;
+        }
+        #hud {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            color: white;
+            font-family: Arial, sans-serif;
+            font-size: 14px;
+        }
+        #hud button {
+            padding: 10px;
+            margin: 5px;
+            background-color: #444;
+            color: white;
+            border: none;
+            cursor: pointer;
+        }
+        #hud button:hover {
+            background-color: #666;
+        }
+    </style>
+</head>
+<body>
+    <div id="hud">
+        <button onclick="switchCamera('strategic')">Strategic View</button>
+        <button onclick="switchCamera('control')">Control Fighter</button>
+    </div>
+    <script type="module">
+        import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.150.0/build/three.module.js';
+        import { OrbitControls } from 'https://cdn.jsdelivr.net/npm/three@0.150.0/examples/jsm/controls/OrbitControls.js';
+
+        // Scene, camera, and renderer setup
+        const scene = new THREE.Scene();
+        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+        const renderer = new THREE.WebGLRenderer();
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        document.body.appendChild(renderer.domElement);
+
+        // Lighting
+        const ambientLight = new THREE.AmbientLight(0x404040, 2);
+        scene.add(ambientLight);
+        const directionalLight = new THREE.DirectionalLight(0xffffff, 1);
+        directionalLight.position.set(0, 10, 10).normalize();
+        scene.add(directionalLight);
+
+        // Models
+        const createShip = (color, position) => {
+            const geometry = new THREE.BoxGeometry(2, 1, 4);
+            const material = new THREE.MeshStandardMaterial({ color });
+            const ship = new THREE.Mesh(geometry, material);
+            ship.position.set(...position);
+            scene.add(ship);
+            return ship;
+        };
+
+        // Player and enemy carriers
+        const playerCarrier = createShip(0x0000ff, [0, -10, 0]);
+        const enemyCarrier = createShip(0xff0000, [0, 10, 0]);
+
+        // Dynamic units array
+        const units = [];
+        const enemyUnits = [];
+
+        // Spawn fighter units periodically
+        const spawnUnit = (color, position, speed, array) => {
+            const unit = createShip(color, position);
+            unit.speed = speed;
+            array.push(unit);
+        };
+
+        setInterval(() => spawnUnit(0x00ff00, [0, -10, 2], 0.05, units), 3000); // Player fighters
+        setInterval(() => spawnUnit(0xff9900, [0, 10, -2], -0.05, enemyUnits), 3000); // Enemy fighters
+
+        // Camera modes
+        const controls = new OrbitControls(camera, renderer.domElement);
+        camera.position.set(0, 10, 20);
+        controls.update();
+
+        let cameraMode = "strategic"; // Options: "strategic" or "control"
+
+        const switchCamera = (mode) => {
+            cameraMode = mode;
+            if (mode === "strategic") {
+                camera.position.set(0, 20, 30);
+                controls.enabled = true;
+            } else if (mode === "control") {
+                controls.enabled = false;
+                if (units.length > 0) {
+                    camera.position.set(
+                        units[0].position.x,
+                        units[0].position.y + 2,
+                        units[0].position.z - 5
+                    );
+                }
+            }
+        };
+
+        // Game loop
+        const animate = () => {
+            requestAnimationFrame(animate);
+            renderer.render(scene, camera);
+
+            // Move units
+            units.forEach((unit, index) => {
+                unit.position.z += unit.speed;
+                if (unit.position.z > 10) {
+                    scene.remove(unit);
+                    units.splice(index, 1);
+                }
+            });
+
+            enemyUnits.forEach((unit, index) => {
+                unit.position.z += unit.speed;
+                if (unit.position.z < -10) {
+                    scene.remove(unit);
+                    enemyUnits.splice(index, 1);
+                }
+            });
+
+            // Update camera for control mode
+            if (cameraMode === "control" && units.length > 0) {
+                const controlledUnit = units[0];
+                camera.position.set(
+                    controlledUnit.position.x,
+                    controlledUnit.position.y + 2,
+                    controlledUnit.position.z - 5
+                );
+            }
+
+            controls.update();
+        };
+
+        animate();
+
+        // Adjust canvas size on window resize
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+    </script>
+</body>
+</html>
+"""
+
+# Save the file for the user to download.
+file_path_3d = "/mnt/data/3d_space_fleet_battle.html"
+with open(file_path_3d, "w") as file:
+    file.write(three_js_game)
+
+file_path_3d
